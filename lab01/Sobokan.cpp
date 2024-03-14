@@ -26,12 +26,32 @@ public:
   void Move_Player_Up();
   void Move_Player_Down();
   bool Is_Victory() const;
+  sf::Text getVictoryText()
+  {
+    return victory_text;
+  }
+  void UpdateVictoryTextPosition(sf::Vector2u windowSize)
+  {
+    if (Is_Victory())
+    {
+      sf::FloatRect textRect = victory_text.getLocalBounds();
+      victory_text.setOrigin(textRect.left + textRect.width / 2.0f,
+                             textRect.top + textRect.height / 2.0f);
+      victory_text.setPosition(sf::Vector2f(windowSize.x / 2.0f, windowSize.y / 2.0f));
+    }
+  }
 
 private:
   std::vector<std::vector<Field>> map;
   sf::Vector2f shift, tile_size;
   sf::Vector2i player_position;
   std::vector<sf::Vector2i> park_positions;
+  sf::Font font;
+  sf::Text victory_text;
+  sf::Texture wall_texture;
+  sf::Texture box_texture;
+  sf::Texture player_texture;
+  sf::Texture floor_texture;
 
   void move_player(int dx, int dy);
 };
@@ -82,10 +102,24 @@ void Sokoban::LoadMapFromFile(std::string fileName)
         player_position = sf::Vector2i(x, y);
         break;
       }
+  wall_texture.loadFromFile("wall.png");
+  player_texture.loadFromFile("player.png");
+  box_texture.loadFromFile("chest.png");
+  floor_texture.loadFromFile("floor.png");
+
+  font.loadFromFile("garota_bonita.ttf");
+  victory_text.setFont(font);
+  victory_text.setString("");
+  victory_text.setCharacterSize(100);
+  victory_text.setFillColor(sf::Color::Red);
+  victory_text.setStyle(sf::Text::Bold);
+  victory_text.setPosition(shift.x + tile_size.x * map[0].size() / 2, shift.y + tile_size.y * map.size() / 2);
 }
 
 void Sokoban::draw(sf::RenderTarget &target, sf::RenderStates states) const
 {
+  sf::Sprite sprite;
+  sf::RectangleShape tile(sf::Vector2f(tile_size.x - 2, tile_size.y - 2));
 
   for (int y = 0; y < map.size(); ++y)
   {
@@ -93,33 +127,45 @@ void Sokoban::draw(sf::RenderTarget &target, sf::RenderStates states) const
     {
       sf::Vector2f position = shift + sf::Vector2f(x * tile_size.x, y * tile_size.y);
 
-      sf::RectangleShape tile(sf::Vector2f(tile_size.x - 2, tile_size.y - 2));
       tile.setPosition(position);
+      sprite.setPosition(position);
+      sprite.setScale(
+          tile_size.x / sprite.getLocalBounds().width,
+          tile_size.y / sprite.getLocalBounds().height);
 
       switch (map[y][x])
       {
       case Field::VOID:
         tile.setFillColor(sf::Color::Black);
+        target.draw(tile);
         break;
       case Field::FLOOR:
-        tile.setFillColor(sf::Color(150, 75, 0));
+        sprite.setTexture(floor_texture);
+        target.draw(sprite);
         break;
       case Field::WALL:
-        tile.setFillColor(sf::Color::White);
+        sprite.setTexture(wall_texture);
+        target.draw(sprite);
         break;
       case Field::BOX:
-        tile.setFillColor(sf::Color::Red);
+        sprite.setTexture(box_texture);
+        target.draw(sprite);
         break;
       case Field::PARK:
-        tile.setFillColor(sf::Color::Green);
+        tile.setFillColor(sf::Color::Red);
+        target.draw(tile);
         break;
       case Field::PLAYER:
         tile.setFillColor(sf::Color::Black);
+        target.draw(tile);
         break;
       }
-
-      target.draw(tile);
     }
+  }
+
+  if (Is_Victory())
+  {
+    target.draw(victory_text);
   }
 }
 
@@ -178,29 +224,29 @@ void Sokoban::move_player(int dx, int dy)
 
   if (allow_move)
   {
-    // Przesuwamy gracza.
     map[player_position.y][player_position.x] = Field::FLOOR;
     player_position = new_pp;
     map[player_position.y][player_position.x] = Field::PLAYER;
   }
 
-  // Niestety w czasie ruchu mog³y ucierpieæ miejsca na skrzynkê. ;-(
   for (auto park_position : park_positions)
     if (map[park_position.y][park_position.x] == Field::FLOOR)
       map[park_position.y][park_position.x] = Field::PARK;
+
+  if (Is_Victory())
+  {
+    victory_text.setString("Victory");
+  }
 }
 
 bool Sokoban::Is_Victory() const
 {
-  // Tym razem dla odmiany optymistycznie zak³adamy, ¿e gracz wygra³.
-  // No ale jeli na którymkolwiek miejscu na skrzynki nie ma skrzynki to chyba za³o¿enie by³o zbyt optymistyczne... : -/
+
   for (auto park_position : park_positions)
     if (map[park_position.y][park_position.x] != Field::BOX)
       return false;
   return true;
 }
-
-int COUNT = 0;
 
 int main()
 {
@@ -229,12 +275,11 @@ int main()
         }
         else if (event.type == sf::Event::Closed)
         {
-          // Obs³uga zamkniêcia okna
+
           window.close();
         }
         else if (event.type == sf::Event::KeyPressed)
         {
-          // Obs³uga naciniêcia klawiszy przez gracza
           switch (event.key.code)
           {
           case sf::Keyboard::Left:
@@ -250,9 +295,13 @@ int main()
             sokoban.Move_Player_Down();
             break;
           default:
-            // Obs³uga innych klawiszy
             break;
           }
+        }
+
+        if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape))
+        {
+          window.close();
         }
       }
       window.draw(sokoban);
@@ -260,18 +309,13 @@ int main()
 
     if (sokoban.Is_Victory())
     {
-      while (COUNT < 1)
-      {
-        std::cout << "Gratulacje! Wygrales!" << std::endl;
 
-        COUNT++;
-      }
       sf::RectangleShape vicScreen(sf::Vector2f(window.getSize().x, window.getSize().y));
-      vicScreen.setFillColor(sf::Color::Green);
+      vicScreen.setFillColor(sf::Color::White);
 
       window.draw(vicScreen);
-      // break;
-      // window.close();
+      sokoban.UpdateVictoryTextPosition(window.getSize()); // Update the position of the victory text
+      window.draw(sokoban.getVictoryText());
     }
 
     window.display();
