@@ -1,6 +1,3 @@
-// Uwaga! Co najmniej C++17!!!
-// Project-> ... Properties->Configuration Properties->General->C++ Language Standard = ISO C++ 17 Standard (/std:c++17)
-
 #include "SFML/Graphics.hpp"
 #include <fstream>
 #include <iostream>
@@ -201,23 +198,21 @@ void Sokoban::Move_Player_Down()
 
 void Sokoban::move_player(int dx, int dy)
 {
-  bool allow_move = false;                                             // Pesymistyczne za³ó¿my, ¿e gracz nie mo¿e siê poruszyæ.
-  sf::Vector2i new_pp(player_position.x + dx, player_position.y + dy); // Potencjalna nowa pozycja gracza.
-  Field fts = map[new_pp.y][new_pp.x];                                 // Element na miejscu na które gracz zamierza przejæ.
+  bool allow_move = false;
+  sf::Vector2i new_pp(player_position.x + dx, player_position.y + dy);
+  Field fts = map[new_pp.y][new_pp.x];
   if (fts != Field::WALL)
   {
-    Field ftsa = map[new_pp.y + dy][new_pp.x + dx]; // Element na miejscu ZA miejscem na które gracz zamierza przejæ. :-D
+    Field ftsa = map[new_pp.y + dy][new_pp.x + dx];
 
-    // Gracz mo¿e siê poruszyæ jeli pole na którym ma stan¹æ to pod³oga lub miejsce na skrzynki.
     if (fts == Field::FLOOR || fts == Field::PARK)
       allow_move = true;
-    // Jeli pole na które chce siê poruszyæ gracz zawiera skrzynkê to mo¿e siê on poruszyæ jedynie jeli kolejne pole jest puste lub zawiera miejsce na skrzynkê  - bo wtedy mo¿e przepchn¹æ skrzynkê.
+
     if (fts == Field::BOX && (ftsa == Field::FLOOR || ftsa == Field::PARK))
     {
       allow_move = true;
-      // Przepychamy skrzynkê.
+
       map[new_pp.y + dy][new_pp.x + dx] = Field::BOX;
-      // Oczywicie pole na którym sta³a skrzynka staje siê teraz pod³og¹.
       map[new_pp.y][new_pp.x] = Field::FLOOR;
     }
   }
@@ -261,24 +256,23 @@ int main()
     sf::Event event;
     window.clear();
 
-    if (!sokoban.Is_Victory())
+    while (window.pollEvent(event))
     {
-      while (window.pollEvent(event))
+      if (event.type == sf::Event::Resized)
       {
-        if (event.type == sf::Event::Resized)
-        {
-          // Zmiana widoku na nowe wymiary okna
-          float width = static_cast<float>(event.size.width);
-          float height = static_cast<float>(event.size.height);
-          window.setView(sf::View(sf::FloatRect(0, 0, width, height)));
-          sokoban.SetDrawParameters(window.getSize());
-        }
-        else if (event.type == sf::Event::Closed)
-        {
+        float width = static_cast<float>(event.size.width);
+        float height = static_cast<float>(event.size.height);
+        window.setView(sf::View(sf::FloatRect(0, 0, width, height)));
+        sokoban.SetDrawParameters(window.getSize());
+      }
+      else if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape))
+      {
+        window.close();
+      }
 
-          window.close();
-        }
-        else if (event.type == sf::Event::KeyPressed)
+      if (!sokoban.Is_Victory())
+      {
+        if (event.type == sf::Event::KeyPressed)
         {
           switch (event.key.code)
           {
@@ -298,23 +292,21 @@ int main()
             break;
           }
         }
-
-        if (event.type == sf::Event::Closed || (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape))
-        {
-          window.close();
-        }
       }
+    }
+
+    if (!sokoban.Is_Victory())
+    {
       window.draw(sokoban);
     }
 
     if (sokoban.Is_Victory())
     {
-
       sf::RectangleShape vicScreen(sf::Vector2f(window.getSize().x, window.getSize().y));
       vicScreen.setFillColor(sf::Color::White);
 
       window.draw(vicScreen);
-      sokoban.UpdateVictoryTextPosition(window.getSize()); // Update the position of the victory text
+      sokoban.UpdateVictoryTextPosition(window.getSize());
       window.draw(sokoban.getVictoryText());
     }
 
