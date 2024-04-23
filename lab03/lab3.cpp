@@ -129,7 +129,7 @@ MyFrame::MyFrame(wxWindow* parent, wxWindowID id, const wxString& title, const w
 	this->Centre(wxBOTH);
 
 	_imageBanana.AddHandler(new wxPNGHandler);
-	_imageBanana.LoadFile("C:\\Users\\msatu\\Downloads\\lab03\\banan.png", wxBITMAP_TYPE_PNG);
+	_imageBanana.LoadFile("C:\\Users\\msatu\\Desktop\\PGK\\lab03\\banan.png", wxBITMAP_TYPE_PNG);
 	
 	_bitmapBanana = wxBitmap(_imageBanana);
 
