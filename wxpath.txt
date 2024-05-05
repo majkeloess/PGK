@@ -1,0 +1,2 @@
+C:\wxWidgets\include\msvc;C:\wxWidgets\include;
+C:\wxWidgets\lib\vc_x64_lib;
